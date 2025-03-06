@@ -36,6 +36,7 @@
             color: red;
             padding: 20px;
         }
+        .debug { color: #444; padding: 10px; border: 1px dashed #ccc; margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -43,49 +44,76 @@
     <div id="comments-container" class="loading">Loading comments...</div>
 
     <script>
+        const repoOwner = 'mygithubcomments'; // Replace with your GitHub username
+        const repoName = 'test1'; // Replace with your repository name
+
         async function fetchComments() {
-            const repoOwner = 'mytighubcomments'; // Replace with your GitHub username
-            const repoName = 'test1'; // Replace with your repository name
             const commentsContainer = document.getElementById('comments-container');
-            
+
             try {
-                // First, find the issue by title
-                const issuesResponse = await fetch(
-                    `https://api.github.com/repos/${repoOwner}/${repoName}/issues?state=all`,
-                    {
-                        headers: {
-                            'Accept': 'application/vnd.github+json'
-                        }
-                    }
-                );
-                
+                // Step 1: Test basic API connectivity
+                commentsContainer.innerHTML = '<div class="debug">Step 1: Testing GitHub API root...</div>';
+                const rootResponse = await fetch('https://api.github.com/', {
+                    headers: { 'Accept': 'application/vnd.github+json' }
+                });
+
+                if (!rootResponse.ok) {
+                    throw new Error(`Root API failed! Status: ${rootResponse.status} - ${rootResponse.statusText}`);
+                }
+
+                const rootData = await rootResponse.json();
+                commentsContainer.innerHTML += `
+                    <div class="debug">
+                        Root API Success! Rate limit remaining: ${rootData.rate_limit.remaining}<br>
+                        Next step: Fetching issues...
+                    </div>
+                `;
+
+                // Step 2: Fetch issues
+                const issuesUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/issues?state=all`;
+                commentsContainer.innerHTML += `<div class="debug">Step 2: Trying ${issuesUrl}...</div>`;
+                const issuesResponse = await fetch(issuesUrl, {
+                    headers: { 'Accept': 'application/vnd.github+json' }
+                });
+
                 if (!issuesResponse.ok) {
-                    throw new Error(`HTTP error! status: ${issuesResponse}`);
-                    // throw new Error(`HTTP error! status: ${issuesResponse.status}`);
+                    const errorText = await issuesResponse.text(); // Get detailed error message
+                    throw new Error(`
+                        Issues API failed!<br>
+                        Status: ${issuesResponse.status} - ${issuesResponse.statusText}<br>
+                        URL: ${issuesUrl}<br>
+                        Response: ${errorText}
+                    `);
                 }
 
                 const issues = await issuesResponse.json();
-                const targetIssue = issues.find(issue => 
-                    issue.title === 'CultDocumentariesRanker'
-                );
+                const targetIssue = issues.find(issue => issue.title === 'CultDocumentariesRanker');
 
                 if (!targetIssue) {
-                    commentsContainer.innerHTML = '<div class="error">Issue not found</div>';
+                    commentsContainer.innerHTML = `
+                        <div class="error">
+                            No issue found with title "CultDocumentariesRanker" in ${repoOwner}/${repoName}
+                        </div>
+                        <div class="debug">Found ${issues.length} issues total</div>
+                    `;
                     return;
                 }
 
-                // Fetch comments for the found issue
-                const commentsResponse = await fetch(
-                    `https://api.github.com/repos/${repoOwner}/${repoName}/issues/${targetIssue.number}/comments`,
-                    {
-                        headers: {
-                            'Accept': 'application/vnd.github+json'
-                        }
-                    }
-                );
+                // Step 3: Fetch comments
+                const commentsUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/issues/${targetIssue.number}/comments`;
+                commentsContainer.innerHTML += `<div class="debug">Step 3: Fetching comments from ${commentsUrl}...</div>`;
+                const commentsResponse = await fetch(commentsUrl, {
+                    headers: { 'Accept': 'application/vnd.github+json' }
+                });
 
                 if (!commentsResponse.ok) {
-                    throw new Error(`HTTP error! status: ${commentsResponse.status}`);
+                    const errorText = await commentsResponse.text();
+                    throw new Error(`
+                        Comments API failed!<br>
+                        Status: ${commentsResponse.status} - ${commentsResponse.statusText}<br>
+                        URL: ${commentsUrl}<br>
+                        Response: ${errorText}
+                    `);
                 }
 
                 const comments = await commentsResponse.json();
@@ -101,15 +129,9 @@
                     const commentElement = document.createElement('div');
                     commentElement.className = 'comment';
                     commentElement.innerHTML = `
-                        <div class="comment-header">
-                            ${comment.user.login} commented:
-                        </div>
-                        <div class="comment-body">
-                            ${comment.body}
-                        </div>
-                        <div class="comment-date">
-                            ${new Date(comment.created_at).toLocaleString()}
-                        </div>
+                        <div class="comment-header">${comment.user.login} commented:</div>
+                        <div class="comment-body">${comment.body}</div>
+                        <div class="comment-date">${new Date(comment.created_at).toLocaleString()}</div>
                     `;
                     commentsContainer.appendChild(commentElement);
                 });
@@ -117,13 +139,14 @@
             } catch (error) {
                 commentsContainer.innerHTML = `
                     <div class="error">
-                        Error loading comments: ${error.message}
+                        Error loading comments:<br>
+                        ${error.message}
                     </div>
                 `;
-                console.error('Error:', error);
+                console.error('Full error:', error);
             }
         }
-
+        
         // Call the function when the page loads
         window.onload = fetchComments;
     </script>
