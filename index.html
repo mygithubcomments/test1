@@ -91,18 +91,18 @@
 
                 // Step 1.1: Rate limit ...
                 debugLogContainer.innerHTML += '<div class="debug">Step 1.1: Testing Rate Limit url ...</div>';
-                const rootResponse = await fetch(rootData.rate_limit_url, {
+                const rlResponse = await fetch(rootData.rate_limit_url, {
                     headers: { 'Accept': 'application/vnd.github+json' }
                 });
 
-                if (!rootResponse.ok) {
-                    throw new Error(`Root API failed! Status: ${rootResponse.status} - ${rootResponse.statusText}`);
+                if (!rlResponse.ok) {
+                    throw new Error(`Root API failed! Status: ${rlResponse.status} - ${rlResponse.statusText}`);
                 }
 
-                const rootData = await rootResponse.json();
+                const rlData = await rlResponse.json();
                 debugLogContainer.innerHTML += `
                     <div class="debug">
-                        Root API Success! Rate limit remaining: ${rootData.rate.remaining}<br>
+                        Root API Success! Rate limit remaining: ${rlData.rate.remaining}<br>
                         Next step: Fetching issues...
                     </div>
                 `;
