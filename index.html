@@ -60,7 +60,8 @@
                 );
                 
                 if (!issuesResponse.ok) {
-                    throw new Error(`HTTP error! status: ${issuesResponse.status}`);
+                    throw new Error(`HTTP error! status: ${issuesResponse}`);
+                    // throw new Error(`HTTP error! status: ${issuesResponse.status}`);
                 }
 
                 const issues = await issuesResponse.json();
