@@ -37,22 +37,42 @@
             padding: 20px;
         }
         .debug { color: #444; padding: 10px; border: 1px dashed #ccc; margin: 10px 0; }
+
+.log-container {
+    background: #f5f5f5;
+    border: 1px solid #ccc;
+    padding: 10px;
+    max-height: 300px; /* Limit height, scroll if needed */
+    overflow-y: auto; /* Scrollable */
+    font-family: monospace; /* Log-like font */
+    margin-bottom: 20px;
+}
+.debug {
+    color: #444;
+    padding: 5px 0;
+}
+.error {
+    color: red;
+    padding: 5px 0;
+}
     </style>
 </head>
 <body>
     <h1>Cult Documentaries Ranker Comments</h1>
+    <div id="debug-log-container" class="log-container"></div> <!-- New log section -->
     <div id="comments-container" class="loading">Loading comments...</div>
 
     <script>
         const repoOwner = 'mygithubcomments'; // Replace with your GitHub username
         const repoName = 'test1'; // Replace with your repository name
 
-        async function fetchComments() {
-            const commentsContainer = document.getElementById('comments-container');
+        const debugLogContainer = document.getElementById('debug-log-container');
+        const commentsContainer = document.getElementById('comments-container');
 
+        async function fetchComments() {
             try {
                 // Step 1: Test basic API connectivity
-                commentsContainer.innerHTML = '<div class="debug">Step 1: Testing GitHub API root...</div>';
+                debugLogContainer.innerHTML += '<div class="debug">Step 1: Testing GitHub API root...</div>';
                 const rootResponse = await fetch('https://api.github.com/', {
                     headers: { 'Accept': 'application/vnd.github+json' }
                 });
@@ -62,7 +82,7 @@
                 }
 
                 const rootData = await rootResponse.json();
-                commentsContainer.innerHTML += `
+                debugLogContainer.innerHTML += `
                     <div class="debug">
                         Root API Success! Rate limit remaining: ${rootData.rate_limit.remaining}<br>
                         Next step: Fetching issues...
@@ -71,7 +91,7 @@
 
                 // Step 2: Fetch issues
                 const issuesUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/issues?state=all`;
-                commentsContainer.innerHTML += `<div class="debug">Step 2: Trying ${issuesUrl}...</div>`;
+                debugLogContainer.innerHTML += `<div class="debug">Step 2: Trying ${issuesUrl}...</div>`;
                 const issuesResponse = await fetch(issuesUrl, {
                     headers: { 'Accept': 'application/vnd.github+json' }
                 });
@@ -90,18 +110,19 @@
                 const targetIssue = issues.find(issue => issue.title === 'CultDocumentariesRanker');
 
                 if (!targetIssue) {
-                    commentsContainer.innerHTML = `
+                    debugLogContainer.innerHTML += `
                         <div class="error">
                             No issue found with title "CultDocumentariesRanker" in ${repoOwner}/${repoName}
                         </div>
                         <div class="debug">Found ${issues.length} issues total</div>
                     `;
+                    commentsContainer.innerHTML = ''; // Clear "Loading..." from comments
                     return;
                 }
 
                 // Step 3: Fetch comments
                 const commentsUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/issues/${targetIssue.number}/comments`;
-                commentsContainer.innerHTML += `<div class="debug">Step 3: Fetching comments from ${commentsUrl}...</div>`;
+                debugLogContainer.innerHTML += `<div class="debug">Step 3: Fetching comments from ${commentsUrl}...</div>`;
                 const commentsResponse = await fetch(commentsUrl, {
                     headers: { 'Accept': 'application/vnd.github+json' }
                 });
@@ -119,6 +140,7 @@
                 const comments = await commentsResponse.json();
 
                 if (comments.length === 0) {
+                    debugLogContainer.innerHTML += '<div class="debug">No comments found.</div>';
                     commentsContainer.innerHTML = 'No comments found.';
                     return;
                 }
@@ -137,13 +159,14 @@
                 });
 
             } catch (error) {
-                commentsContainer.innerHTML = `
-                    <div class="error">
-                        Error loading comments:<br>
-                        ${error.message}
-                    </div>
-                `;
-                console.error('Full error:', error);
+    debugLogContainer.innerHTML += `
+        <div class="error">
+            Error loading comments:<br>
+            ${error.message}
+        </div>
+    `;
+    commentsContainer.innerHTML = ''; // Clear "Loading..." from comments
+    console.error('Full error:', error);
             }
         }
         
